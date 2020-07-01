@@ -1,0 +1,984 @@
+---
+title: "final project1 viruses ziying,lu"
+output: html_document
+---
+
+## 1. library
+```{r}
+library(readxl)
+library(tidyverse)
+library(maps)
+library(mapdata)
+library(ggmap)
+library(mapproj)
+library(lme4)
+library(sp)
+library(maptools)
+library(magrittr)
+library(plyr)
+library(gridExtra)
+library(ggplot2)
+library(tableone)
+library(nnet)
+library(stargazer)
+library(devtools)
+library(ggpubr)
+```
+
+## 2. load data
+```{r}
+Data_for_enteric_virus <- read_excel("Data for enteric virus.xlsx")
+attach(Data_for_enteric_virus)
+```
+
+## 3. data processing
+```{r}
+name <- as.vector(colnames(Data_for_enteric_virus))
+```
+
+## 4 SiteRecruitment (change number to specific name)
+```{r}
+Site_recruitment <- ifelse(Data_for_enteric_virus$SiteRecruitment == 4,"Dong Thap", ifelse(Data_for_enteric_virus$SiteRecruitment == 2,"Dak Lak",ifelse(Data_for_enteric_virus$SiteRecruitment == 5,"Hue","Khanh Hoa")))
+Data_for_enteric_virus$SiteRecruitment <- Site_recruitment 
+```
+
+## 5. data frame（the distance from home to hospital）
+```{r}
+map_distance <- data.frame(lon=Data_for_enteric_virus$LONGITUDE,lat=Data_for_enteric_virus$LATITUDE,
+                            hospital=Data_for_enteric_virus$SiteRecruitment, lon_1=Data_for_enteric_virus$SiteRecruitment,lat_1=Data_for_enteric_virus$SiteRecruitment
+                            )
+home_address_1 <- ifelse( map_distance$lon_1== "Dong Thap","105.6882	", ifelse(map_distance$lon_1 == "Dak Lak","108.2378",ifelse(map_distance$lon_1 == "Hue","109.0526","107.5909")))
+home_address_2 <- ifelse( map_distance$lat_1== "Dong Thap","10.4938	", ifelse(map_distance$lat_1 == "Dak Lak","12.71001",ifelse(map_distance$lat_1 == "Hue","12.25851","16.46371	")))
+map_distance$lon_1 <- home_address_1
+map_distance$lat_1 <- home_address_2
+```
+
+## 6.map(home-red and hospital-blue) 
+```{r}
+register_google(key="AIzaSyCdg-FnupzUEEAM45jJFOYMvX_gDFZUk7g")
+geocode("Vietnam")
+geocode("Vietnam Dong Thap")
+geocode("Vietnam Dak Lak")
+geocode("Vietnam Khanh Hoa")
+geocode("Vietnam Hue")
+map_distance$lon_1 <- as.numeric(map_distance$lon_1)
+map_distance$lat_1 <- as.numeric(map_distance$lat_1)
+ggmap(get_map("Vietnam",zoom=6))+geom_point(data=map_distance,aes(x=lon,y=lat),colour = 'red4',alpha=0.7) + geom_point(data=map_distance,aes(x=lon_1,y=lat_1),alpha=0.7,color='blue')
+# vietman lon=108.2772,lat=14.05832
+```
+
+## 7 distribution of six common viruses
+```{r}
+common_virus_homelocation <- data.frame(CentrallyCity=Data_for_enteric_virus$CentrallyCity,lon=Data_for_enteric_virus$LONGITUDE,lan=Data_for_enteric_virus$LATITUDE,Rotavirus=Data_for_enteric_virus$Rotavirus,Norovirus=Data_for_enteric_virus$Norovirus, Aichivirus=Data_for_enteric_virus$Kobuvirus, Adenovirus=Data_for_enteric_virus$Mastadenovirus,Sapovirus=Data_for_enteric_virus$Sapovirus, Astrovirus=Data_for_enteric_virus$Mamastrovirus
+                            )
+#choose 1(positive) for every common viruses
+a<-common_virus_homelocation[which(common_virus_homelocation$Rotavirus=="Yes"),]
+b<-common_virus_homelocation[which(common_virus_homelocation$Norovirus=="Yes" ),]
+c<-common_virus_homelocation[which(common_virus_homelocation$Aichivirus=="Yes"),]
+d<-common_virus_homelocation[which(common_virus_homelocation$Adenovirus=="Yes"),]
+e<-common_virus_homelocation[which(common_virus_homelocation$Sapovirus=="Yes"),]
+f<-common_virus_homelocation[which(common_virus_homelocation$Astrovirus=="Yes"),]
+
+#1.Rotavirus all in "Dong Thap"
+#2.Norovirus 69 Dong Thap 
+b_1 <- b[which(b$CentrallyCity=="Dong Thap"),]
+length(b_1$CentrallyCity)
+#count
+length(a$Rotavirus)
+length(b$Norovirus)
+length(c$Aichivirus)
+length(d$Adenovirus)
+length(e$Sapovirus)
+length(f$Astrovirus)
+```
+
+## map continue
+```{r}
+#par(mfrow=c(2,1))
+#n=151
+ggmap(get_googlemap("Vietnam Dong Thap", zoom=9,
+maptype='roadmap'),extent = 'device')+
+  geom_point(data=a,aes(x=lon,y=lan,fill=Rotavirus),
+colour = 'red4',alpha=0.7)+ geom_point(data=map_distance,aes(x=lon_1,y=lat_1),alpha=0.7,color='blue')
+```
+
+```{r}
+#n=89
+ggmap(get_googlemap("Vietnam", zoom=6,
+maptype='roadmap'),extent = 'device')+
+  geom_point(data=b,aes(x=lon,y=lan,fill=Norovirus),
+colour = 'red4',alpha=0.7)
+```
+
+```{r}
+#n=5
+ggmap(get_googlemap("Vietnam Dong Thap", zoom=9,
+maptype='roadmap'),extent = 'device')+
+  geom_point(data=c,aes(x=lon,y=lan,fill=Aichivirus),
+colour = 'red4',alpha=0.7)
+``` 
+
+```{r}
+#n=51
+ggmap(get_googlemap("Vietnam", zoom=6,
+maptype='roadmap'),extent = 'device')+
+  geom_point(data=d,aes(x=lon,y=lan,fill=Adenovirus),
+colour = 'red4',alpha=0.7)
+```
+
+```{r}
+#n=57
+ggmap(get_googlemap("Vietnam", zoom=6,
+maptype='roadmap'),extent = 'device')+
+  geom_point(data=e,aes(x=lon,y=lan,fill=Sapovirus),
+colour = 'red4',alpha=0.7)
+```
+
+```{r}
+#n=22
+ggmap(get_googlemap("Vietnam", zoom=6,
+maptype='roadmap'),extent = 'device')+
+  geom_point(data=f,aes(x=lon,y=lan,fill=Astrovirus),
+colour = 'red4',alpha=0.7)
+```
+
+## 8 gender
+```{r}
+pie_data2 <- Data_for_enteric_virus[,'Gender']
+tab2 <- table(pie_data2)
+tab2 <- as.data.frame(tab2)
+colnames(tab2) <- c('gender','numb');tab2
+p3 <- ggplot(tab2,aes(x='',y=numb,fill=gender)) +
+      geom_bar(stat = 'identity', width = 1) +
+      theme_bw() +scale_fill_manual(values=c("lightblue", "grey"))+
+      labs(x = '', y = '',title = 'Number of respondents with different gender') 
+p3
+p4 <- p3 + coord_polar(theta = 'y', start = 0, direction = 1)
+p4
+```
+
+## 9 Age
+```{r}
+scatt_data <- Data_for_enteric_virus[,'Age']
+tab3 <- table(scatt_data)
+tab3 <- as.data.frame(tab3)
+colnames(tab3) <- c('age','numb');tab3
+ggplot(tab3,mapping=aes(x=age,y=numb,fill=age))+
+      geom_bar(stat="identity")   
+```
+
+## 10 symptons 
+```{r}
+library(tableone)
+pie_data3 <- Data_for_enteric_virus[,c('ContactDiar','BloodStool','MucoidStool','AbdominalPain','ThreeDaysFever')]
+tab3 <- CreateCatTable(data = pie_data3,vars = c('ContactDiar','BloodStool','MucoidStool','AbdominalPain','ThreeDaysFever'))
+tab3 <- as.data.frame(tab3$Overall)
+tab3 <- t(tab3)
+write.csv(tab3,file = 'Clinical manifestations.csv')
+name01 <- c('ContactDiar','BloodStool','MucoidStool','AbdominalPain','ThreeDaysFever')
+```
+## 11 contactdiar
+```{r}
+t_1 <- data_frame(ContactDiar=pie_data3$ContactDiar)
+t_1<- t_1[which(t_1$ContactDiar=="Yes"| t_1$ContactDiar=="No"),]
+table1 <- table(t_1[,1])
+table1 <- as.data.frame(table1)
+colnames(table1) <- c(name01[1],'numb');table1
+percentage <- scales::percent(table1$numb/sum(table1$numb),accuracy = 0.01)
+labs01 <- paste(table1[,1], '(', percentage, ')', sep = '')
+p5 <- ggplot(table1,aes(x=' ',y=numb,fill=ContactDiar)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(350, 5), label = labs01)) +
+  theme_bw() +scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents contacted with patients') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p5
+```
+
+##12 blood stool
+```{r}
+table2 <- table(pie_data3[,2])
+table2 <- as.data.frame(table2)
+table2<- table2[which(table2$Var1=="Yes"| table2$Var1=="No"),]
+colnames(table2) <- c(name01[2],'numb');table2
+percentage <- scales::percent(table2$numb/sum(table2$numb),accuracy = 0.01)
+labs02 <- paste(table2[,1], '(', percentage, ')', sep = '')
+p6 <- ggplot(table2,aes(x=' ',y=numb,fill=BloodStool)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(350, 5), label = labs02)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Blood Stool') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p6
+```
+
+##13 mucoid stool
+```{r}
+table3 <- table(pie_data3[,3])
+table3 <- as.data.frame(table3)
+table3<- table3[which(table3$Var1=="Yes"| table3$Var1=="No"),]
+colnames(table3) <- c(name01[3],'numb');table3
+percentage <- scales::percent(table3$numb/sum(table3$numb),accuracy = 0.01)
+labs03 <- paste(table3[,1], '(', percentage, ')', sep = '')
+p7 <- ggplot(table3,aes(x=' ',y=numb,fill=MucoidStool)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(350, 5), label = labs03)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Mucoid Stool') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p7
+```
+
+##14 abdominal pain
+```{r}
+table4 <- table(pie_data3[,4])
+table4 <- as.data.frame(table4)
+table4<- table4[which(table4$Var1=="Yes"| table4$Var1=="No"),]
+colnames(table4) <- c(name01[4],'numb');table4
+percentage <- scales::percent(table4$numb/sum(table4$numb),accuracy = 0.01)
+labs04 <- paste(table4[,1], '(', percentage, ')', sep = '')
+p8 <- ggplot(table4,aes(x=' ',y=numb,fill=AbdominalPain)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(500, 150), label = labs04)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Abdominal Pain') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p8
+```
+
+##15 Three days fever
+```{r}
+table5 <- table(pie_data3[,5])
+table5 <- as.data.frame(table5)
+table5<- table5[which(table5$Var1=="Yes"| table5$Var1=="No"),]
+colnames(table5) <- c(name01[5],'numb');table5
+percentage <- scales::percent(table5$numb/sum(table5$numb),accuracy = 0.01)
+labs05 <- paste(table5[,1], '(', percentage, ')', sep = '')
+p9 <- ggplot(table5,aes(x=' ',y=numb,fill=ThreeDaysFever)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(500, 150), label = labs05)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Three-Days Fever') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p9
+```
+
+```{r}
+library(devtools)
+library(ggpubr)
+ggarrange(p6,p7,p8,p9,ncol = 2,nrow = 2)
+```
+
+##16 Blood description
+```{r}
+boxplot_data <- Data_for_enteric_virus[,c(23:28)]
+name_blood <- read.table('name02.txt',header = F)
+name_blood <- as.vector(name_blood$V1)
+colnames(boxplot_data) <- name_blood
+library(reshape2)
+library(knitr)
+boxplot_data01 <- melt(boxplot_data,variable.name = 'group',value.name = 'value')
+ggplot(boxplot_data01, aes(x=group, y=value)) + geom_boxplot(alpha=0.7) +
+       scale_y_continuous(name = "value")+
+       scale_x_discrete(name = "Variables") +
+       ggtitle("Statistical description of blood routine examination") +
+       theme_bw() +
+       theme(plot.title = element_text(size = 14, face =  "bold"),
+        text = element_text(size = 12),
+        axis.title = element_text(face="bold"),
+        axis.text.x=element_text(size = 11)) 
+```
+
+
+##17 water resources
+```{r}
+water_data <- Data_for_enteric_virus[,c(31:37)]
+name02 <- c('Tap','Well','Rain','River','Pond','Bottled','OtherWS')
+```
+
+##tap
+```{r}
+wat_tab1 <- table(water_data[,1])
+wat_tab1 <- as.data.frame(wat_tab1)
+colnames(wat_tab1) <- c(name02[1],'numb');wat_tab1
+percentage <- scales::percent(wat_tab1$numb/sum(wat_tab1$numb),accuracy = 0.01)
+wat_labs01 <- paste(wat_tab1[,1], '(', percentage, ')', sep = '')
+p11 <- ggplot(wat_tab1,aes(x=' ',y=numb,fill=Tap)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(500, 200), label = wat_labs01)) +
+  theme_bw() +  scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents drank water from taps') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p11
+```
+
+#Well
+```{r}
+wat_tab2 <- table(water_data[,2])
+wat_tab2 <- as.data.frame(wat_tab2)
+colnames(wat_tab2) <- c(name02[2],'numb');wat_tab2
+percentage <- scales::percent(wat_tab2$numb/sum(wat_tab2$numb),accuracy = 0.01)
+wat_labs02 <- paste(wat_tab2[,1], '(', percentage, ')', sep = '')
+p12 <- ggplot(wat_tab2,aes(x=' ',y=numb,fill=Well)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(500, 5), label = wat_labs02)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents drank water from well') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p12
+```
+
+#Rain
+```{r}
+wat_tab3 <- table(water_data[,3])
+wat_tab3 <- as.data.frame(wat_tab3)
+colnames(wat_tab3) <- c(name02[3],'numb');wat_tab3
+percentage <- scales::percent(wat_tab3$numb/sum(wat_tab3$numb),accuracy = 0.01)
+wat_labs03 <- paste(wat_tab3[,1], '(', percentage, ')', sep = '')
+p13 <- ggplot(wat_tab3,aes(x=' ',y=numb,fill=Rain)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(500, 5), label = wat_labs03)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents drank water from Rain') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p13
+```
+
+#River
+```{r}
+wat_tab4 <- table(water_data[,4])
+wat_tab4 <- as.data.frame(wat_tab4)
+colnames(wat_tab4) <- c(name02[4],'numb');wat_tab4
+percentage <- scales::percent(wat_tab4$numb/sum(wat_tab4$numb),accuracy = 0.01)
+wat_labs04 <- paste(wat_tab4[,1], '(', percentage, ')', sep = '')
+p14 <- ggplot(wat_tab4,aes(x=' ',y=numb,fill=River)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(500, 100), label = wat_labs04)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents drank water from River') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p14
+```
+
+#Pond
+```{r}
+wat_tab5 <- table(water_data[,5])
+wat_tab5 <- as.data.frame(wat_tab5)
+colnames(wat_tab5) <- c(name02[5],'numb');wat_tab5
+percentage <- scales::percent(wat_tab5$numb/sum(wat_tab5$numb),accuracy = 0.01)
+wat_labs05 <- paste(wat_tab5[,1], '(', percentage, ')', sep = '')
+p15 <- ggplot(wat_tab5,aes(x=' ',y=numb,fill=Pond)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(500, 1), label = wat_labs05)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents drank water from Pond') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p15
+```
+
+#Bottled
+```{r}
+wat_tab6 <- table(water_data[,6])
+wat_tab6 <- as.data.frame(wat_tab6)
+colnames(wat_tab6) <- c(name02[6],'numb');wat_tab6
+percentage <- scales::percent(wat_tab6$numb/sum(wat_tab6$numb),accuracy = 0.01)
+wat_labs06 <- paste(wat_tab6[,1], '(', percentage, ')', sep = '')
+p16 <- ggplot(wat_tab6,aes(x=' ',y=numb,fill=Bottled)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(500, 100), label = wat_labs06)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents drank Bottled water') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p16
+```
+
+#otherWS
+```{r}
+wat_tab7 <- table(water_data[,7])
+wat_tab7 <- as.data.frame(wat_tab7)
+colnames(wat_tab7) <- c(name02[7],'numb');wat_tab7
+percentage <- scales::percent(wat_tab7$numb/sum(wat_tab7$numb),accuracy = 0.01)
+wat_labs07 <- paste(wat_tab7[,1], '(', percentage, ')', sep = '')
+p17 <- ggplot(wat_tab7,aes(x=' ',y=numb,fill=OtherWS)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(350), label = wat_labs07)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents drank water from other water sources') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p17
+```
+
+```{r}
+ggarrange(p11,p12,p13,p14,p15,p16,ncol=3,nrow=2)
+```
+
+##18 animal contact
+```{r}
+animal_data <- Data_for_enteric_virus[,c(38:40)]
+name03 <- c('KeepAnimal','KillingAnimal','EatCookRawMeat')
+```
+
+#KeepAnimal
+```{r}
+mate_tab1 <- table(mate_data[,1])
+mate_tab1 <- as.data.frame(mate_tab1)
+colnames(mate_tab1) <- c(name03[1],'numb');mate_tab1
+percentage <- scales::percent(mate_tab1$numb/sum(mate_tab1$numb),accuracy = 0.01)
+mate_labs01 <- paste(mate_tab1[,1], '(', percentage, ')', sep = '')
+p17 <- ggplot(mate_tab1,aes(x=' ',y=numb,fill=KeepAnimal)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(500,150), label = mate_labs01)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents keeping Animal') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p17
+```
+
+#KillingAnimal
+```{r}
+mate_tab2 <- table(mate_data[,2])
+mate_tab2 <- as.data.frame(mate_tab2)
+colnames(mate_tab2) <- c(name03[2],'numb');mate_tab2
+percentage <- scales::percent(mate_tab2$numb/sum(mate_tab2$numb),accuracy = 0.01)
+mate_labs02 <- paste(mate_tab2[,1], '(', percentage, ')', sep = '')
+p18 <- ggplot(mate_tab2,aes(x=' ',y=numb,fill=KillingAnimal)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(500,10), label = mate_labs02)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents Killing Animal') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p18
+```
+
+#EatRawMeat
+```{r}
+mate_tab3 <- table(mate_data[,3])
+mate_tab3 <- as.data.frame(mate_tab3)
+colnames(mate_tab3) <- c(name03[3],'numb');mate_tab3
+percentage <- scales::percent(mate_tab3$numb/sum(mate_tab3$numb),accuracy = 0.01)
+mate_labs03 <- paste(mate_tab3[,1], '(', percentage, ')', sep = '')
+p19 <- ggplot(mate_tab3,aes(x=' ',y=numb,fill=EatCookRawMeat)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(600,250), label = mate_labs03)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents Eating Raw Meat') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p19
+```
+
+## 19 Bacterial
+```{r}
+bact_data <- as.data.frame(Data_for_enteric_virus[,c('IF_Bacterial')])
+bact_tab <- table(bact_data[,1])
+bact_tab <- as.data.frame(bact_tab);bact_tab
+colnames(bact_tab) <- c('IF_Bacterial','numb');bact_tab
+percentage <- scales::percent(bact_tab$numb/sum(bact_tab$numb),accuracy = 0.01)
+bact_lab01 <- paste(bact_tab[,1], '(', percentage, ')', sep = '')
+p21 <- ggplot(bact_tab,aes(x=' ',y=numb,fill=IF_Bacterial)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(400,25), label = bact_lab01)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents with pathogens tested positive') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p21
+```
+
+## 20 viruses
+```{r}
+chart_data <- Data_for_enteric_virus[,c(56:87)]
+name04 <- c('Alphapapillomavirus','Alphapolyomavirus','Alphatorquevirus','Betapapillomavirus','Betapolyomavirus','Betatorquevirus','Bocaparvovirus','Cardiovirus','Circovirus','Cosavirus','Cytomegalovirus','Enterovirus','Gammatorquevirus','Gemycircularvirus','Gemykibivirus','Gemykrogvirus','Husavirus','Kobuvirus','Lymphocryptovirus','Mamastrovirus','Mastadenovirus','Morbillivirus','Norovirus','Parechovirus','Picobirnavirus','Porprismacovirus','Protoparvovirus','Rotavirus','Rubulavirus','Salivirus','Sapovirus','Unclassified virus')
+#name04 <- read.table('name02.txt',header = F)
+#name04 <- as.vector(name04$V1)
+colnames(chart_data) <- name04
+tab4 <- CreateCatTable(data = chart_data,vars = name04)
+tab5 <- as.list(tab4$Overall)
+tab6 <- tab5[[name04[1]]]
+for (i in 2:32){
+  tab7 <- tab5[[name04[i]]]
+  tab6 <- rbind(tab6,tab7)
+}
+write.csv(tab6,file = 'viruses.csv')
+```
+
+# common viruses (plot)
+```{r}
+common_virus <- Data_for_enteric_virus[,c(73,75,76,78,83,86)]
+name05 <- c('Kobuvirus','Mamastrovirus','Mastadenovirus','Norovirus','Rotavirus','Sapovirus')
+colnames(common_virus) <- name05
+common_virus_tab1 <- table(common_virus[,1])
+common_virus_tab1 <- as.data.frame(common_virus_tab1);common_virus_tab1
+colnames(common_virus_tab1) <- c('Kobuvirus','numb');common_virus_tab1
+percentage <- scales::percent(common_virus_tab1$numb/sum(common_virus_tab1$numb),accuracy = 0.01)
+common_virus_lab01 <- paste(common_virus_tab1[,1], '(', percentage, ')', sep = '')
+p22 <- ggplot(common_virus_tab1,aes(x=' ',y=numb,fill=Kobuvirus)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(350,1), label = common_virus_lab01)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents infected by Kobuvirus') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p22
+```
+
+```{r}
+common_virus_tab2 <- table(common_virus[,2])
+common_virus_tab2 <- as.data.frame(common_virus_tab2);common_virus_tab2
+colnames(common_virus_tab2) <- c('Mamastrovirus','numb');common_virus_tab2
+percentage <- scales::percent(common_virus_tab2$numb/sum(common_virus_tab2$numb),accuracy = 0.01)
+common_virus_lab02 <- paste(common_virus_tab2[,1], '(', percentage, ')', sep = '')
+p23 <- ggplot(common_virus_tab2,aes(x=' ',y=numb,fill=Mamastrovirus)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(350,10), label = common_virus_lab02)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents infected by Mamastrovirus') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p23
+```
+
+```{r}
+common_virus_tab3 <- table(common_virus[,3])
+common_virus_tab3 <- as.data.frame(common_virus_tab3);common_virus_tab3
+colnames(common_virus_tab3) <- c('Mastadenovirus','numb');common_virus_tab3
+percentage <- scales::percent(common_virus_tab3$numb/sum(common_virus_tab3$numb),accuracy = 0.01)
+common_virus_lab03 <- paste(common_virus_tab3[,1], '(', percentage, ')', sep = '')
+p24 <- ggplot(common_virus_tab3,aes(x=' ',y=numb,fill=Mastadenovirus)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(350,25), label = common_virus_lab03)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents infected by Mastadenovirus') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p24
+```
+
+```{r}
+common_virus_tab4 <- table(common_virus[,4])
+common_virus_tab4 <- as.data.frame(common_virus_tab4);common_virus_tab4
+colnames(common_virus_tab4) <- c('Norovirus','numb');common_virus_tab4
+percentage <- scales::percent(common_virus_tab4$numb/sum(common_virus_tab4$numb),accuracy = 0.01)
+common_virus_lab04 <- paste(common_virus_tab4[,1], '(', percentage, ')', sep = '')
+p25 <- ggplot(common_virus_tab4,aes(x=' ',y=numb,fill=Norovirus)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(350,25), label = common_virus_lab04)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents infected by Norovirus') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p25
+```
+
+```{r}
+common_virus_tab5 <- table(common_virus[,5])
+common_virus_tab5 <- as.data.frame(common_virus_tab5);common_virus_tab5
+colnames(common_virus_tab5) <- c('Rotavirus','numb');common_virus_tab5
+percentage <- scales::percent(common_virus_tab5$numb/sum(common_virus_tab5$numb),accuracy = 0.01)
+common_virus_lab05 <- paste(common_virus_tab5[,1], '(', percentage, ')', sep = '')
+p26 <- ggplot(common_virus_tab5,aes(x=' ',y=numb,fill=Rotavirus)) +
+  geom_bar(stat = 'identity', width = 1) +
+  geom_text(aes(y = c(375,75), label = common_virus_lab05)) +
+  theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+  labs(x = '', y = '',title = 'Number of respondents infected by Rotavirus') +
+  coord_polar(theta = 'y', start = 0, direction = 1)
+p26
+```
+
+```{r}
+common_virus_tab6 <- table(common_virus[,6])
+common_virus_tab6 <- as.data.frame(common_virus_tab6);common_virus_tab6
+colnames(common_virus_tab6) <- c('Sapovirus','numb');common_virus_tab6
+percentage <- scales::percent(common_virus_tab6$numb/sum(common_virus_tab6$numb),accuracy = 0.01)
+common_virus_lab06 <- paste(common_virus_tab6[,1], '(', percentage, ')', sep = '')
+p27 <- ggplot(common_virus_tab6,aes(x=' ',y=numb,fill=Sapovirus)) +
+              geom_bar(stat = 'identity', width = 1) +
+              geom_text(aes(y = c(375,75), label = common_virus_lab06)) +
+              theme_bw() + scale_fill_manual(values=c("lightblue", "grey"))+
+              labs(x = '', y = '',title = 'Number of respondents infected by Sapovirus') +
+              coord_polar(theta = 'y', start = 0, direction = 1)
+p27
+```
+
+```{r}
+grid.arrange(p22,p23,p24,p25,p26,p27,ncol=3,nrow=2)
+```
+
+
+##21 coinfections
+```{r}
+coinfect_data <- Data_for_enteric_virus[,'is_coinf']
+tab8 <- table(coinfect_data)
+tab8 <- as.data.frame(tab8)
+colnames(tab8) <- c('is_coinf','numb');tab8
+ggplot(tab8,mapping=aes(x=is_coinf,y=numb,width=0.5,fill=is_coinf))+
+  geom_bar(stat="identity")
+```
+
+
+## coinfection regression model 01
+```{r}
+regres_data <- Data_for_enteric_virus[,c(3,8,9,12,13,17:28,31:36,38:41,88)]
+write.csv(regres_data,file = 'regression data02.csv')
+regres_data02 <- read.csv('regression data02.csv',header = T)
+regres_data02 <- regres_data02[,-1]
+model<-lm(is_coinf~.,data=regres_data)
+summary(model)
+```
+
+
+```{r}
+name06 <- c('Age','SiteRecruitment','Gender','Length of stay','CentrallyCity','ContactDiar','BloodStool','MucoidStool','NumberDiarEpi','AbdominalPain','ThreeDaysFever','HaemoglobinResult','WhiteCellsResult','NeutrophilsResult','LymphocytesResult','EosinophilsResult','PlateletsResult','Tap','Well','Rain','River','Pond','Bottled','KeepAnimal','KillingAnimal','EatCookRawMeat','IF_Bacterial','is_coinf')
+name06 <- as.vector(name06)
+regres_data <- Data_for_enteric_virus[,c(3,8,9,12,13,17:28,31:36,38:41,88)]
+colnames(regres_data) <- name06
+write.csv(regres_data,file = 'regression data02.csv')
+regres_data02 <- read.csv('regression data02.csv',header = T)
+regres_data02 <- regres_data02[,-1]
+model<-lm(is_coinf~.,data=regres_data02)
+summary(model)
+```
+
+```{r}
+library(MASS)
+#name06 <- read.table('name02.txt',header = F)
+#name06 <- as.vector(name06$V1)
+regres_data <- Data_for_enteric_virus[,c(3,8,9,12,13,17:28,30:41,73,75,76,78,83,86,88)]
+colnames(regres_data) <- name06
+regres_data <- regres_data[,-24]
+#regres_data[,c(18:23)] <- as.factor(regres_data[,c(18:23)])
+write.csv(regres_data,file = 'regression data03.csv')
+regres_data01 <- read.csv('regression data03.csv',header = T)
+regres_data01 <- regres_data01[,-1]
+regres_data01[,2] <- as.factor(regres_data01[,2])
+name07 <- as.vector(colnames(regres_data01))
+```
+
+# ordinal regression model (delete)
+```{r}
+library(leaps)
+model2 <- regsubsets(is_coinf ~ Age+SiteRecruitment+Gender+HaemoglobinResult+WhiteCellsResult+Well+IF_Bacterial, data = regres_data02,nbest = 7)
+plot(model2,scale='r2')
+summary(model2)
+model3 <- lm(is_coinf ~ Age+SiteRecruitment+Gender+HaemoglobinResult+WhiteCellsResult+Well+IF_Bacterial, data = regres_data02)
+summary(model3)
+model4<-step(model3,direction = "backward")
+summary(model4)
+regres_data01[,c(2,3,5:7,9,10,18:28)] <- as.factor(regres_data01[,c(2,3,5:7,9,10,18:28)])
+model5 <- polr(as.factor(is_coinf) ~ Age+HaemoglobinResult+WhiteCellsResult+LymphocytesResult+EatCookRawMeat+IF_Bacterial, data = regres_data02)
+summary(model5,digits = 3)
+```
+
+
+##22 multinomial linear regression model
+```{r}
+library(nnet)
+regres_data4 <- Data_for_enteric_virus[,c(3,13,17,31:36,38:40,88)]
+regres_data4$is_coinf <- as.factor (regres_data4$is_coinf)
+table(regres_data4$is_coinf) #check the output dependent variable
+regres_data4$is_coinf <- relevel(regres_data4$is_coinf, ref= "0") # change it, "0" is the reference type
+```
+
+```{r}
+multi1 <- multinom(data=regres_data4,formula = is_coinf ~ Age +CentrallyCity+ContactDiar+Tap+Well+Rain+River+Pond+Bottled+KeepAnimal+KillingAnimal+EatCookRawMeat)
+summary(multi1)
+write.csv(multi1$residuals,file = 'multiregression result1.csv')
+```
+
+
+```{r}
+library(stargazer)
+stargazer(multi1,type = "text",out = "multi1.text")
+```
+
+```{r}
+multi1.r <- exp(coef(multi1))
+multi1.r 
+```
+
+```{r}
+library(stargazer)
+stargazer(multi1,type = "text",coef=list(multi1.r),p.auto=FALSE, out = "multi1r.text")
+```
+
+# multi2 (coinfection combinations)
+```{r}
+#multi_data <- read_excel("multi data.xlsx")
+#multi_data$is_coinf <- as.numeric(multi_data$is_coinf)
+index <- which(multi_data$is_coinf==3|multi_data$is_coinf==4|multi_data$is_coinf==5)
+multi_data[index,]$is_coinf = " $>= 3$ coinfections"
+regres_data4_2 <- multi_data[,c(3,13,17,31:36,38:40,88)]
+#regres_data4_2 <- which(regres_data4_2$is_coinf=="NA")
+#regres_data4_2 <- ifelse(regres_data4_2$is_coinf=="NA",0)
+table(multi_data$is_coinf)  # 1 is the reference type
+#regres_data4$is_coinf <- relevel(regres_data4$is_coinf, ref= "0") 
+```
+
+```{r}
+multi2 <- multinom(data=regres_data4_2,formula = is_coinf ~ Age +CentrallyCity+ContactDiar+Tap+Well+Rain+River+Pond+Bottled+KeepAnimal+KillingAnimal+EatCookRawMeat)
+summary(multi2)
+write.csv(multi2$residuals,file = 'multiregression result2.csv')
+```
+
+```{r}
+library(stargazer)
+stargazer(multi2,type = "text",out = "multi2.text")
+```
+
+
+## 23 what are the risk factors associated with the common viruses? logit model
+#1 Kobuvirus 
+```{r}
+bio_1 <- Data_for_enteric_virus[,c(3,13,17,31:36,38:40,73)]
+bio_1$Kobuvirus <- as.factor(bio_1$Kobuvirus)
+table(bio_1$Kobuvirus) # check the output dependent variable
+bio1_model <- glm(data=bio_1, Kobuvirus  ~ Age +CentrallyCity+ContactDiar+Tap+Well+Rain+River+Pond+Bottled+KeepAnimal+KillingAnimal+EatCookRawMeat,family = binomial(link = "logit"))
+summary(bio1_model)
+```
+
+# adjust data
+```{r}
+#logit_data <- read_excel("Desktop/logit data.xlsx")
+bio_12 <- logit_data[,c(3,13,17,31:36,38:40,73)]
+index2 <- which(logit_data$CentrallyCity=="Dak Lak"|logit_data$CentrallyCity=="Dak Nong"|logit_data$CentrallyCity=="Khanh Hoa"|logit_data$CentrallyCity=="Quang Binh"|logit_data$CentrallyCity=="Quang Tri"|logit_data$CentrallyCity=="Thua Thien - Hue")
+bio_12[index2,]$CentrallyCity = " other locations"
+#contact_update <- which(logit_data$ContactDiar==1|logit_data$ContactDiar==2)
+#bio_12$ContactDiar <- contact_update
+logit_data$Kobuvirus <- as.factor(logit_data$Kobuvirus)
+bio12_model <- glm(data=bio_12, Kobuvirus  ~ Age +CentrallyCity+ContactDiar+Tap+Well+Rain+River+Pond+Bottled+KeepAnimal+KillingAnimal+EatCookRawMeat,family = binomial(link = "logit"))
+summary(bio12_model)
+#index2 <- which(bio_1$CentrallyCity=="Dak Lak"|bio_1$CentrallyCity=="Dak Nong"|bio_1$CentrallyCity=="Khanh Hoa"|bio_1=="Quang Binh"|bio_1=="Quang Tri"|bio_1=="Thua Thien-Hue")
+#bio_1[index2,]$CentrallyCity = " other locations"
+#regres_data4_2 <- multi_data[,c(3,13,17,31:36,38:40,88)]
+```
+
+# choose（Age）
+```{r}
+update_bio1 <- glm(Kobuvirus~1,family = binomial(link = "logit"),data=bio_1)
+logit.bio1 <- step(update_bio1,scope = formula(bio1_model),direction = "both",trace = F)
+summary(logit.bio1) 
+```
+
+```{r}
+library(stargazer)
+stargazer(bio1_model,type = "text",out = "bio1_model.text")
+```
+
+```{r}
+library(stargazer)
+stargazer(logit.bio1,type = "text",out = "logit.bio1.text")
+```
+
+```{r}
+exp(coef(logit.bio1))
+```
+
+#2 Mamastrovirus # Well
+```{r}
+bio_2 <- Data_for_enteric_virus[,c(3,13,17,31:36,38:40,75)]
+bio_2$Mamastrovirus <- as.factor(bio_2$Mamastrovirus)
+bio2_model <- glm(data=bio_2, Mamastrovirus  ~ Age +CentrallyCity+ContactDiar+Tap+Well+Rain+River+Pond+Bottled+KeepAnimal+KillingAnimal+EatCookRawMeat,family = binomial(link = "logit"))   #Well
+summary(bio2_model)
+```
+
+```{r}
+#choose fron bio2_model automatically
+update_bio2 <- glm(Mamastrovirus ~ 1,family = binomial(link = "logit"),data=bio_2)
+logit.bio2 <- step(update_bio2,scope = formula(bio2_model),direction = "both",trace = F)
+summary(logit.bio2) #KeepAnimalYes
+```
+
+```{r}
+stargazer(bio2_model,type = "text",out = "bio2_model.text")
+```
+
+```{r}
+stargazer(logit.bio2,type = "text",out = "logit.bio2.text")
+```
+
+```{r}
+bio2_model2 <- glm(data=bio_2, Mamastrovirus  ~ Well+KeepAnimal,family = binomial(link = "logit"))   #Well
+summary(bio2_model2)
+stargazer(bio2_model2,type = "text",out = "bio2_model2.text")
+final_model <- exp(coef(bio2_model2))
+stargazer(final_model,type = "text",out = "final_model.text")
+```
+
+
+#3 Mastadenovirus #Age
+```{r}
+bio_3 <- Data_for_enteric_virus[,c(3,13,17,31:36,38:40,76)]
+bio_3$Mastadenovirus <- as.factor(bio_3$Mastadenovirus)
+bio3_model <- glm(data=bio_3, Mastadenovirus  ~ Age +CentrallyCity+ContactDiar+Tap+Well+Rain+River+Pond+Bottled+KeepAnimal+KillingAnimal+EatCookRawMeat,family = binomial(link = "logit"))
+summary(bio3_model)
+```
+
+#choose automatically 
+```{r}
+update_bio3 <- glm(Mastadenovirus ~ 1,family = binomial(link = "logit"),data=bio_3)
+logit.bio3 <- step(update_bio3,scope = formula(bio3_model),direction = "both",trace = F)
+summary(logit.bio3)
+```
+
+```{r}
+stargazer(bio3_model,type = "text",out = "bio3_model.text")
+```
+
+```{r}
+stargazer(logit.bio3,type = "text",out = "logit.bio3.text")
+```
+
+#Age is significant logit
+```{r}
+bio_3_1 <- bio_3[,c(1,13)]
+bio3_model_1 <- glm(data=bio_3_1, Mastadenovirus  ~ Age,family = binomial(link = "logit"))
+summary(bio3_model_1)
+```
+
+```{r}
+stargazer(bio3_model_1,type = "text",out = "bio3_model_1.text")
+exp(coef(bio3_model_1))
+```
+
+#4 Norovirus (Age,Dong Thap ) # Firth's penalised likelihood
+```{r}
+bio_4 <- Data_for_enteric_virus[,c(3,13,17,31:36,38:40,78)]
+bio_4$Norovirus <- as.factor(bio_4$Norovirus)
+bio4_model <- glm(data=bio_4, Norovirus  ~ Age +CentrallyCity+ContactDiar+Tap+Well+Rain+River+Pond+Bottled+KeepAnimal+KillingAnimal+EatCookRawMeat,family = binomial(link = "logit"))
+summary(bio4_model)
+#library(logistf)     #Firth's penalised likelihood
+#h1 <- logistf(data=bio_4,Norovirus  ~ Age +CentrallyCity)
+#summary(h1)
+```
+#continue logit
+```{r}
+bio_4_1 <- bio_4[,c(1,2,13)]
+#CentrallyCity<-bio_4_1[which(bio_4_1$CentrallyCity=="Dong Thap"|bio_4_1$CentrallyCity=="Dak Nong"|bio_4_1$CentrallyCity=="Khanh Hoa"),]
+#bio_4_1$Norovirus <- as.factor(bio_4_1$Norovirus)
+bio4_model1 <- glm(data=CentrallyCity, Norovirus  ~ Age + CentrallyCity, family = binomial(link = "logit"))
+summary(bio4_model1)
+```
+
+# DONG THAP logit
+```{r}
+bio_4_11 <- CentrallyCity[,c(2,3)]
+bio4_model1_update <- glm(data=bio_4_11, Norovirus  ~ CentrallyCity, family = binomial(link = "logit"))
+summary(bio4_model1_update)
+coef(bio4_model1_update)
+```
+
+# compare model
+```{r}
+anova(bio4_model1_update,bio4_model1,test = "Chisq")
+```
+
+```{r}
+stargazer(bio4_model,type = "text",out = "bio4_model.text")
+```
+
+```{r}
+stargazer(bio4_model1,type = "text",out = "bio4_model1.text")
+```
+
+```{r}
+stargazer(bio4_model1_update,type = "text",out = "bio4_model1_update.text")
+```
+
+```{r}
+exp_model4 <-exp(coef(bio4_model1_update))
+stargazer(exp_model4,type = "text",out = "bio4_model1_update.text")
+#Age,ContactDiar,River, Bottle
+```
+
+#5  Rotavirus 
+```{r}
+bio_5 <- Data_for_enteric_virus[,c(3,13,17,31:36,38:40,83)]
+bio_5$Rotavirus <- as.factor(bio_5$Rotavirus)
+bio5_model <- glm(data=bio_5, Rotavirus  ~ Age +CentrallyCity+ContactDiar+Tap+Well+Rain+River+Pond+Bottled+KeepAnimal+KillingAnimal+EatCookRawMeat,family = binomial(link = "logit"))
+summary(bio5_model)
+```
+
+```{r}
+stargazer(bio5_model,type = "text",out = "bio5_model.text")
+```
+
+# Age,ContactDiar,River, Bottle 
+```{r}
+bio_5_1 <- bio_5[,c(1,3,7,9,13)]
+bio_5_1$Rotavirus <- as.factor(bio_5_1$Rotavirus)
+#table(bio_5_1$ContactDiar)
+bio5_model1 <- glm(data=bio_5_1, Rotavirus  ~ Age +ContactDiar+River+Bottled,family = binomial(link = "logit"))
+summary(bio5_model1)
+coef(bio5_model1)
+```
+
+```{r}
+stargazer(bio5_model1,type = "text",out = "bio5_model1.text")
+```
+#compare two models
+```{r}
+anova(bio5_model1,bio5_model,test="Chisq")
+```
+
+```{r}
+exp_model5 <-exp(coef(bio5_model1))
+stargazer(exp_model5,type = "text",out = "exp_model5.text")
+```
+
+#predict 
+```{r}
+testdata5 <- data.frame(rating=c(1,2,3,4,5), Age=mean(bio_5$Age),ContactDiar=mean(bio_5$ContactDiar),River=mean(bio_5$River),Bottled=mean(bio_5$Bottled))
+testdata5
+#bio5_model12 <- glm(data=bio_5_1, Rotavirus  ~ Age +River+Bottled,family = binomial(link = "logit"))
+```
+
+```{r}
+bio5_model12 <- glm(data=bio_5_1, Rotavirus  ~ Age,family = binomial(link = "logit"))
+#testdata5$Age<-as.factor(testdata5$Age)
+#testdata5$River<-as.factor(testdata5$River)
+#testdata5$Bottled<-as.factor(testdata5$Bottled)
+testdata5$prob <- predict(bio5_model12,newdata = testdata5,type = "response")
+testdata5
+```
+
+```{r}
+testdata5 <-data_frame(rating=mean(bio_5$rating),Age=seq(1,2,4))
+testdata5
+```
+
+#6 Sapovirus #Dong thap, eatcookraw
+```{r}
+bio_6 <- Data_for_enteric_virus[,c(3,13,17,31:36,38:40,86)]
+bio_6$Sapovirus <- as.factor(bio_6$Sapovirus)
+bio6_model <- glm(data=bio_6, Sapovirus ~ Age +CentrallyCity+ContactDiar+Tap+Well+Rain+River+Pond+Bottled+KeepAnimal+KillingAnimal+EatCookRawMeat,family = binomial(link = "logit"))
+summary(bio6_model)
+```
+
+#对 Dong thap,eatcookraw
+```{r}
+bio_6_1 <- bio_6[,c(2,12,13)]
+bio_6_1$Sapovirus <- as.factor(bio_6_1$Sapovirus)
+bio6_model1 <- glm(data=bio_6_1, Sapovirus ~ CentrallyCity+EatCookRawMeat,family = binomial(link = "logit"))
+summary(bio6_model1)
+h2 <- logistf(data=bio_6_1,Sapovirus  ~ EatCookRawMeat +CentrallyCity)
+summary(h2)
+```
+
+```{r}
+stargazer(bio6_model,type = "text",out = "bio6_model.text")
+```
+
+```{r}
+stargazer(bio6_model1 ,type = "text",out = "bio6_model1.text")
+```
+
+```{r}
+bio_6_2 <- Data_for_enteric_virus[,c(3,17,31:36,38:40,86)]
+bio_6_2$Sapovirus <- as.factor(bio_6_2$Sapovirus)
+bio6_model2 <- glm(data=bio_6_2, Sapovirus ~ Age +ContactDiar+Tap+Well+Rain+River+Pond+Bottled+KeepAnimal+KillingAnimal+EatCookRawMeat,family = binomial(link = "logit"))
+summary(bio6_model2)
+```
+
+```{r}
+stargazer(bio6_model2 ,type = "text",out = "bio6_model2.text")
+```
+
+```{r}
+exp_model6 <-exp(coef(bio6_model))
+exp_model6
+#stargazer(exp_model6 ,type = "text",out = "exp_model6.text")
+```
